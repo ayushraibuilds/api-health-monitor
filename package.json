@@ -1,0 +1,23 @@
+{
+  "name": "pulseapi",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "API Health & Cost Monitor — track spend, latency, and uptime across all your API providers",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^7.3.1",
+    "@vitejs/plugin-react": "^5.1.4"
+  },
+  "dependencies": {
+    "lucide-react": "^0.574.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.13.0",
+    "recharts": "^3.7.0"
+  }
+}
