@@ -1,12 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
-import { providers, generateSparkline } from '../data/mockData';
+import { getProvidersData } from '../services/apiService';
+
+const generateSparkline = (base, volatility) => {
+    return Array.from({ length: 20 }, (_, i) => ({
+        x: i,
+        y: Math.max(0, base + (Math.random() - 0.5) * base * volatility)
+    }));
+};
 
 export default function Providers() {
     const [expanded, setExpanded] = useState(null);
+    const [providers, setProviders] = useState([]);
+
+    useEffect(() => {
+        getProvidersData().then(setProviders);
+    }, []);
 
     const toggle = (id) => setExpanded(expanded === id ? null : id);
 
@@ -99,7 +111,7 @@ export default function Providers() {
                             {/* Expanded Details */}
                             {isExpanded && (
                                 <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                                    {provider.models.length > 0 && (
+                                    {provider.models?.length > 0 && (
                                         <div style={{ marginBottom: 16 }}>
                                             <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
                                                 Models
@@ -128,7 +140,7 @@ export default function Providers() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {provider.endpoints.map((ep) => (
+                                            {provider.endpoints?.map((ep) => (
                                                 <tr key={ep.name}>
                                                     <td style={{ fontFamily: "'SF Mono', monospace", fontSize: '0.78rem' }}>{ep.name}</td>
                                                     <td>{ep.requests.toLocaleString()}</td>

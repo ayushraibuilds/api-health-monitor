@@ -6,8 +6,9 @@ import {
     DollarSign, Activity, Clock, Shield, TrendingUp, TrendingDown,
     AlertTriangle, AlertCircle, Info, ArrowRight,
 } from 'lucide-react';
-import { kpiMetrics, costTrendData, spendBreakdown, alerts, providers } from '../data/mockData';
-
+import { useEffect, useState } from 'react';
+import { getProvidersData, getKPIData, getCostTrendData, getSpendBreakdown, getAlerts } from '../services/apiService';
+import { supabase } from '../lib/supabase';
 const severityIcon = {
     critical: AlertCircle,
     warning: AlertTriangle,
@@ -38,8 +39,38 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Dashboard() {
+    const [providers, setProviders] = useState([]);
+    const [kpiMetrics, setKpiMetrics] = useState({});
+    const [costTrendData, setCostTrendData] = useState([]);
+    const [spendBreakdown, setSpendBreakdown] = useState([]);
+    const [alerts, setAlerts] = useState([]);
+
+    useEffect(() => {
+        const load = async () => {
+            setProviders(await getProvidersData());
+            setKpiMetrics(await getKPIData() || {});
+            setCostTrendData(await getCostTrendData());
+            setSpendBreakdown(await getSpendBreakdown());
+            setAlerts(await getAlerts());
+        };
+        load();
+
+        // Real-time live sync for new metrics
+        const channel = supabase
+            .channel('public:api_metrics')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'api_metrics' }, () => {
+                // Reload dashboard data when a new ping is recorded
+                load();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
     const kpiData = Object.values(kpiMetrics);
-    const recentAlerts = alerts.filter(a => !a.acknowledged).slice(0, 4);
+    const recentAlerts = alerts.filter(a => !a?.acknowledged).slice(0, 4);
 
     return (
         <div className="animate-fade-in">

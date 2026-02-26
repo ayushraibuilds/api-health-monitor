@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Activity, ArrowRight, BarChart3, Shield, Zap, Globe, Bell,
-    DollarSign, TrendingUp, Check, Star, ChevronRight, Clock, Eye,
+    DollarSign, TrendingUp, Check, Star, ChevronRight, Eye,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const features = [
     {
@@ -78,6 +80,16 @@ const logoColors = ['#10a37f', '#d4a27f', '#4285f4', '#ff9900', '#635bff', '#f22
 
 export default function Landing() {
     const navigate = useNavigate();
+    const { signIn } = useAuth();
+    const [isDemoLoading, setIsDemoLoading] = useState(false);
+
+    const handleDemoLogin = async () => {
+        setIsDemoLoading(true);
+        const { success } = await signIn('demo@pulseapi.com', 'demo12345');
+        setIsDemoLoading(false);
+        if (success) navigate('/dashboard');
+        else alert('Demo login failed. Please ensure the Supabase backend is running.');
+    };
 
     return (
         <div style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', position: 'relative', zIndex: 1 }}>
@@ -178,10 +190,11 @@ export default function Landing() {
                     </button>
                     <button
                         className="btn btn-secondary"
-                        onClick={() => navigate('/dashboard')}
+                        onClick={handleDemoLogin}
+                        disabled={isDemoLoading}
                         style={{ padding: '14px 28px', fontSize: '1rem', borderRadius: 14 }}
                     >
-                        <Eye size={18} /> Live Demo
+                        <Eye size={18} /> {isDemoLoading ? 'Loading Demo...' : 'Live Demo'}
                     </button>
                 </div>
 

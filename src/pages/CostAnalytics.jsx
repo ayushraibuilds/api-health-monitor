@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, Legend,
 } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Target, AlertTriangle, Calculator } from 'lucide-react';
-import { costTrendData, costByModel, weeklyComparison, providers } from '../data/mockData';
-
+import { getProvidersData, getCostTrendData } from '../services/apiService';
 const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     return (
@@ -28,6 +27,15 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function CostAnalytics() {
     const [period, setPeriod] = useState('daily');
+    const [providers, setProviders] = useState([]);
+    const [costTrendData, setCostTrendData] = useState([]);
+    const costByModel = [];
+    const weeklyComparison = [];
+
+    useEffect(() => {
+        getProvidersData().then(setProviders);
+        getCostTrendData().then(setCostTrendData);
+    }, []);
 
     const totalSpend = providers.reduce((sum, p) => sum + p.spend, 0);
     const totalBudget = providers.reduce((sum, p) => sum + p.budget, 0);

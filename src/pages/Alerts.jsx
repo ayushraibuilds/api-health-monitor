@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     AlertCircle, AlertTriangle, Info, Bell, Check, X, Filter,
-    Plus, Clock, Zap,
+    Plus, Clock, Zap, Send
 } from 'lucide-react';
-import { alerts, incidents, alertRules } from '../data/mockData';
-
+import { getAlerts, triggerAlert } from '../services/apiService';
 const severityIcon = {
     critical: AlertCircle,
     warning: AlertTriangle,
@@ -14,12 +13,28 @@ const severityIcon = {
 export default function Alerts() {
     const [tab, setTab] = useState('alerts');
     const [filter, setFilter] = useState('all');
+    const [alerts, setAlerts] = useState([]);
+    const [isTriggering, setIsTriggering] = useState(false);
+    const incidents = [];
+    const alertRules = [];
+
+    useEffect(() => {
+        getAlerts().then(setAlerts);
+    }, []);
 
     const filteredAlerts = filter === 'all'
         ? alerts
         : alerts.filter(a => a.severity === filter);
 
     const unresolved = alerts.filter(a => !a.acknowledged).length;
+
+    const handleTestAlert = async () => {
+        setIsTriggering(true);
+        const res = await triggerAlert('Cost Threshold Exceeded', 'OpenAI', 'warning', 154.20);
+        setIsTriggering(false);
+        if (res?.success) alert('Test alert email dispatched successfully via Edge Function!');
+        else alert('Failed to trigger alert. Make sure you are logged in and the edge function is deployed.');
+    };
 
     return (
         <div className="animate-fade-in">
@@ -30,6 +45,9 @@ export default function Alerts() {
                         <p>Monitor, manage, and configure alert rules for all your APIs</p>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="btn btn-secondary" onClick={handleTestAlert} disabled={isTriggering}>
+                            <Send size={14} /> {isTriggering ? 'Sending...' : 'Test Alert'}
+                        </button>
                         <button className="btn btn-secondary">
                             <Filter size={14} /> Filter
                         </button>

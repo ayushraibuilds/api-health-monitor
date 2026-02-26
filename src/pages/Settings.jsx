@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Key, Bell, Palette, Shield, User, CreditCard,
     Eye, EyeOff, Copy, Trash2, Plus, Save,
 } from 'lucide-react';
-import { apiKeys, providers } from '../data/mockData';
-
+import { getProvidersData, storeApiKey, removeApiKey } from '../services/apiService';
 const settingsTabs = [
     { id: 'api-keys', icon: Key, label: 'API Keys' },
     { id: 'budgets', icon: CreditCard, label: 'Budgets' },
@@ -15,10 +14,32 @@ const settingsTabs = [
 
 export default function Settings() {
     const [activeTab, setActiveTab] = useState('api-keys');
-    const [showKey, setShowKey] = useState({});
+    const [providers, setProviders] = useState([]);
+    const [isAdding, setIsAdding] = useState(false);
+    const [newProvider, setNewProvider] = useState('openai');
+    const [newKey, setNewKey] = useState('');
 
-    const toggleKey = (provider) => {
-        setShowKey(prev => ({ ...prev, [provider]: !prev[provider] }));
+    const loadProviders = () => {
+        getProvidersData().then(setProviders);
+    };
+
+    useEffect(() => {
+        loadProviders();
+    }, []);
+
+    const handleAddKey = async () => {
+        if (!newKey) return;
+        await storeApiKey(newProvider, newKey);
+        setIsAdding(false);
+        setNewKey('');
+        loadProviders();
+    };
+
+    const handleRemoveKey = async (providerName) => {
+        if (confirm(`Remove ${providerName} key?`)) {
+            await removeApiKey(providerName.toLowerCase());
+            loadProviders();
+        }
     };
 
     return (
@@ -54,39 +75,49 @@ export default function Settings() {
                                 <h3>API Key Management</h3>
                                 <p>Manage your API keys for connected providers. Keys are encrypted and stored securely.</p>
 
-                                {apiKeys.map((key) => (
-                                    <div key={key.provider} className="api-key-row">
+                                {providers.map((p) => (
+                                    <div key={p.id} className="api-key-row">
                                         <div className="api-key-provider">
                                             <div style={{
-                                                width: 32, height: 32, borderRadius: 8, background: key.color,
+                                                width: 32, height: 32, borderRadius: 8, background: p.color,
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 fontSize: '0.65rem', fontWeight: 700, color: 'white',
                                             }}>
-                                                {key.provider.slice(0, 2).toUpperCase()}
+                                                {p.name.slice(0, 2).toUpperCase()}
                                             </div>
                                             <div>
-                                                <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{key.provider}</div>
-                                                <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Last used: {key.lastUsed}</div>
+                                                <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{p.name}</div>
+                                                <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Connected</div>
                                             </div>
                                         </div>
-                                        <div className="api-key-value">
-                                            {showKey[key.provider] ? key.key.replace(/\*/g, 'a') : key.key}
+                                        <div className="api-key-value" style={{ color: '#10b981' }}>
+                                            Active / Encrypted
                                         </div>
                                         <div className="api-key-actions">
-                                            <button className="btn btn-ghost btn-sm" onClick={() => toggleKey(key.provider)} title="Toggle visibility">
-                                                {showKey[key.provider] ? <EyeOff size={14} /> : <Eye size={14} />}
-                                            </button>
-                                            <button className="btn btn-ghost btn-sm" title="Copy"><Copy size={14} /></button>
-                                            <button className="btn btn-ghost btn-sm" title="Remove" style={{ color: '#ef4444' }}>
+                                            <button className="btn btn-ghost btn-sm" onClick={() => handleRemoveKey(p.name)} title="Remove" style={{ color: '#ef4444' }}>
                                                 <Trash2 size={14} />
                                             </button>
                                         </div>
                                     </div>
                                 ))}
 
-                                <button className="btn btn-secondary" style={{ marginTop: 16 }}>
-                                    <Plus size={14} /> Add API Key
-                                </button>
+                                {isAdding ? (
+                                    <div style={{ marginTop: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
+                                        <select className="form-input" value={newProvider} onChange={e => setNewProvider(e.target.value)} style={{ width: 120 }}>
+                                            <option value="openai">OpenAI</option>
+                                            <option value="anthropic">Anthropic</option>
+                                            <option value="stripe">Stripe</option>
+                                            <option value="resend">Resend</option>
+                                        </select>
+                                        <input className="form-input" type="password" placeholder="sk-..." value={newKey} onChange={e => setNewKey(e.target.value)} style={{ flex: 1 }} />
+                                        <button className="btn btn-primary btn-sm" onClick={handleAddKey}>Save</button>
+                                        <button className="btn btn-ghost btn-sm" onClick={() => setIsAdding(false)}>Cancel</button>
+                                    </div>
+                                ) : (
+                                    <button className="btn btn-secondary" style={{ marginTop: 16 }} onClick={() => setIsAdding(true)}>
+                                        <Plus size={14} /> Add API Key
+                                    </button>
+                                )}
                             </div>
                         </div>
                     )}

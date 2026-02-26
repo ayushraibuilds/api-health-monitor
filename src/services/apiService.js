@@ -1,143 +1,165 @@
-/**
- * API Service Layer
- *
- * Provides a unified interface for fetching API usage data.
- * Currently uses mock data, designed to plug in real API integrations.
- *
- * To connect a real provider:
- * 1. Add API key to Settings → API Keys
- * 2. The service will auto-detect configured keys
- * 3. Real data blends with mock data for unconfigured providers
- */
-
-import * as mockData from '../data/mockData';
-
-const API_KEYS_STORAGE = 'pulseapi_api_keys';
+import { supabase } from '../lib/supabase';
 
 /**
- * Get stored API keys
+ * API Service Layer for Supabase Backend
  */
-export function getStoredKeys() {
-    try {
-        return JSON.parse(localStorage.getItem(API_KEYS_STORAGE) || '{}');
-    } catch {
-        return {};
-    }
+
+async function getUserId() {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.user?.id;
 }
 
-/**
- * Store an API key
- */
-export function storeApiKey(provider, key) {
-    const keys = getStoredKeys();
-    keys[provider] = key;
-    localStorage.setItem(API_KEYS_STORAGE, JSON.stringify(keys));
-}
-
-/**
- * Remove an API key
- */
-export function removeApiKey(provider) {
-    const keys = getStoredKeys();
-    delete keys[provider];
-    localStorage.setItem(API_KEYS_STORAGE, JSON.stringify(keys));
-}
-
-/**
- * Check if a provider has a real API key configured
- */
-export function isProviderConnected(providerId) {
-    const keys = getStoredKeys();
-    return !!keys[providerId];
-}
-
-/**
- * Fetch OpenAI usage data (real API)
- * Requires: OpenAI API key with organization access
- */
-async function fetchOpenAIUsage(apiKey) {
-    try {
-        const today = new Date();
-        const startDate = new Date(today);
-        startDate.setDate(startDate.getDate() - 30);
-
-        const response = await fetch(
-            `https://api.openai.com/v1/organization/usage?start_date=${startDate.toISOString().split('T')[0]}&end_date=${today.toISOString().split('T')[0]}`,
-            {
-                headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json',
-                },
-            }
-        );
-
-        if (!response.ok) {
-            console.warn('OpenAI usage API returned:', response.status);
-            return null;
-        }
-
-        return await response.json();
-    } catch (err) {
-        console.warn('Failed to fetch OpenAI usage:', err.message);
-        return null;
-    }
-}
-
-/**
- * Get all providers data (real + mock fallback)
- */
 export async function getProvidersData() {
-    const keys = getStoredKeys();
-    let providers = [...mockData.providers];
+    const userId = await getUserId();
+    if (!userId) return [];
 
-    // If OpenAI key is configured, try to fetch real data
-    if (keys.openai) {
-        const realData = await fetchOpenAIUsage(keys.openai);
-        if (realData) {
-            // Merge real data into mock provider
-            const idx = providers.findIndex(p => p.id === 'openai');
-            if (idx >= 0) {
-                providers[idx] = {
-                    ...providers[idx],
-                    // Map real data fields here when API response format is confirmed
-                    _source: 'live',
-                };
-            }
-        }
+    const { data, error } = await supabase
+        .from('providers')
+        .select('*')
+        .eq('user_id', userId);
+
+    if (error) {
+        console.error('Error fetching providers:', error);
+        return [];
     }
 
-    return providers;
+    // Map DB schema to frontend expected format
+    const providersList = await Promise.all(data.map(async (provider) => {
+        let baseData = {
+            id: provider.id,
+            name: provider.provider_name.charAt(0).toUpperCase() + provider.provider_name.slice(1),
+            status: 'operational',
+            latency: 0,
+            requests: 0,
+            spend: 0,
+            color: provider.provider_name === 'openai' ? '#10a37f' : '#6366f1'
+        };
+
+        if (provider.provider_name === 'openai') {
+            try {
+                const { data: edgeData, error: edgeError } = await supabase.functions.invoke('fetch-openai-usage', {});
+                if (!edgeError && edgeData) {
+                    baseData.spend = edgeData.total_spend || 0;
+                    baseData.requests = edgeData.requests || 0;
+                    baseData.latency = edgeData.latency || 0;
+                    baseData.status = edgeData.status || 'operational';
+                }
+            } catch (err) {
+                console.warn('Failed to fetch OpenAI live data from edge function', err);
+            }
+        }
+        return baseData;
+    }));
+
+    return providersList;
 }
 
-/**
- * Get dashboard KPI data
- */
-export function getKPIData() {
-    return mockData.kpiMetrics;
+export async function getKPIData() {
+    const userId = await getUserId();
+    if (!userId) return null;
+
+    return {
+        totalSpend: { label: 'Total Spend (30d)', value: '$0.00', trend: '0%', trendDirection: 'down' },
+        monthlyEstimate: { label: 'Monthly Estimate', value: '$0.00', trend: '0%', trendDirection: 'down' },
+        avgLatencyMs: { label: 'Avg Latency', value: '0ms', trend: '0ms', trendDirection: 'down' },
+        activeProviders: { label: 'Active Providers', value: '0', trend: '0', trendDirection: 'up' },
+    };
 }
 
-/**
- * Get cost trend data
- */
-export function getCostTrendData() {
-    return mockData.costTrendData;
+export async function getCostTrendData() {
+    return [];
 }
 
-/**
- * Get spend breakdown data
- */
-export function getSpendBreakdown() {
-    return mockData.spendBreakdown;
+export async function getSpendBreakdown() {
+    return [];
 }
 
-/**
- * Get alerts
- */
-export function getAlerts() {
-    return mockData.alerts;
+export async function getAlerts() {
+    return [];
 }
 
-/**
- * Get all mock data exports (for components that need everything)
- */
-export { mockData };
+export async function storeApiKey(provider, key) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) return;
+
+    if (user.email === 'demo@pulseapi.com') {
+        alert('Saving API keys is disabled in Demo Mode for security.');
+        return;
+    }
+
+    const userId = user.id;
+    // Using a placeholder nonce and empty encrypted key if pgsodium isn't fully set up yet
+    const { error } = await supabase
+        .from('providers')
+        .upsert({
+            user_id: userId,
+            provider_name: provider,
+            // In a real env, edge functions handle this encryption. Sending raw key for demo logic:
+            api_key_encrypted: '\\x00',
+            api_key_nonce: '\\x00'
+        }, { onConflict: 'user_id,provider_name' });
+
+    if (error) {
+        console.error('Error storing API key:', error);
+    }
+}
+
+export async function removeApiKey(provider) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) return;
+
+    if (user.email === 'demo@pulseapi.com') {
+        alert('Removing API keys is disabled in Demo Mode for security.');
+        return;
+    }
+
+    const userId = user.id;
+
+    const { error } = await supabase
+        .from('providers')
+        .delete()
+        .match({ user_id: userId, provider_name: provider });
+
+    if (error) {
+        console.error('Error removing API key:', error);
+    }
+}
+
+export async function isProviderConnected(provider) {
+    const userId = await getUserId();
+    if (!userId) return false;
+
+    const { data, error } = await supabase
+        .from('providers')
+        .select('id')
+        .match({ user_id: userId, provider_name: provider })
+        .single();
+
+    if (error) return false;
+    return !!data;
+}
+
+export async function triggerAlert(alertTitle, providerName, severity, cost) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) return;
+
+    if (user.email === 'demo@pulseapi.com') {
+        alert('Email dispatch is disabled in Demo Mode to prevent abuse.');
+        return { success: false, error: 'Demo mode active' };
+    }
+
+    const userId = user.id;
+
+    const { data, error } = await supabase.functions.invoke('trigger-alerts', {
+        body: { alertTitle, providerName, severity, cost }
+    });
+
+    if (error) {
+        console.error('Error triggering alert:', error);
+        return { success: false, error };
+    }
+    return { success: true, data };
+}

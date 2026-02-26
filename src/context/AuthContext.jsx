@@ -1,64 +1,69 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext(null);
-
-const STORAGE_KEY = 'pulseapi_user';
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Check for existing session
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            try {
-                setUser(JSON.parse(stored));
-            } catch {
-                localStorage.removeItem(STORAGE_KEY);
-            }
-        }
-        setLoading(false);
+        // Get active session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user ?? null);
+            setLoading(false);
+        });
+
+        // Listen for changes on auth state (log in, log out, etc.)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+            setLoading(false);
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
-    const signUp = (email, password, name) => {
-        // In production, this would call Supabase/Firebase
-        const newUser = {
-            id: crypto.randomUUID(),
+    const signUp = async (email, password, name) => {
+        const { data, error } = await supabase.auth.signUp({
             email,
-            name: name || email.split('@')[0],
-            initials: (name || email).slice(0, 2).toUpperCase(),
-            plan: 'free',
-            createdAt: new Date().toISOString(),
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
-        setUser(newUser);
-        return { success: true, user: newUser };
-    };
-
-    const signIn = (email, password) => {
-        // In production, this would validate against a backend
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            const existingUser = JSON.parse(stored);
-            if (existingUser.email === email) {
-                setUser(existingUser);
-                return { success: true, user: existingUser };
+            password,
+            options: {
+                data: { full_name: name, initials: (name || email).slice(0, 2).toUpperCase() }
             }
+        });
+        if (error) return { success: false, error: error.message };
+        return { success: true, user: data.user };
+    };
+
+    const signIn = async (email, password) => {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+
+        if (error) {
+            // If user doesn't exist, we fallback to signup for this demo context
+            if (error.message.includes('Invalid login credentials')) {
+                return signUp(email, password, email.split('@')[0]);
+            }
+            return { success: false, error: error.message };
         }
-        // For demo: auto-create account on login
-        return signUp(email, password, email.split('@')[0]);
+        return { success: true, user: data.user };
     };
 
-    const signOut = () => {
-        localStorage.removeItem(STORAGE_KEY);
-        setUser(null);
+    const signOut = async () => {
+        await supabase.auth.signOut();
     };
 
-    const updateUser = (updates) => {
-        const updated = { ...user, ...updates };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-        setUser(updated);
+    const updateUser = async (updates) => {
+        // Depending on what we're updating, we would hit supabase.auth.updateUser
+        // or a profile table.
+        const { data, error } = await supabase.auth.updateUser({
+            data: updates
+        });
+        if (!error && data.user) {
+            setUser(data.user);
+        }
     };
 
     return (

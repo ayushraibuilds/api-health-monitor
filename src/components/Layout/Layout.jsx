@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard,
@@ -13,15 +14,7 @@ import {
     LogOut,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { alerts } from '../../data/mockData';
-
-const navItems = [
-    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/providers', icon: Globe, label: 'API Providers' },
-    { path: '/costs', icon: DollarSign, label: 'Cost Analytics' },
-    { path: '/alerts', icon: Bell, label: 'Alerts & Incidents', badge: alerts.filter(a => !a.acknowledged).length },
-    { path: '/settings', icon: Settings, label: 'Settings' },
-];
+import { getAlerts } from '../../services/apiService';
 
 const pageNames = {
     '/dashboard': 'Dashboard',
@@ -36,6 +29,19 @@ export default function Layout({ children }) {
     const navigate = useNavigate();
     const { user, signOut } = useAuth();
     const currentPage = pageNames[location.pathname] || 'Dashboard';
+    const [alerts, setAlerts] = useState([]);
+
+    useEffect(() => {
+        getAlerts().then(setAlerts);
+    }, []);
+
+    const navItems = [
+        { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { path: '/providers', icon: Globe, label: 'API Providers' },
+        { path: '/costs', icon: DollarSign, label: 'Cost Analytics' },
+        { path: '/alerts', icon: Bell, label: 'Alerts & Incidents', badge: alerts.filter(a => !a?.acknowledged).length },
+        { path: '/settings', icon: Settings, label: 'Settings' },
+    ];
 
     const initials = user?.initials || user?.name?.slice(0, 2).toUpperCase() || 'DK';
 
