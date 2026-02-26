@@ -84,11 +84,6 @@ export default function Landing() {
     const [isDemoLoading, setIsDemoLoading] = useState(false);
 
     const handleDemoLogin = async () => {
-        if (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder')) {
-            alert('Environment variables are missing! You need to add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your Vercel project settings, then redeploy.');
-            return;
-        }
-
         setIsDemoLoading(true);
         const { success, error } = await signIn('demo@pulseapi.com', 'demo12345');
         setIsDemoLoading(false);
