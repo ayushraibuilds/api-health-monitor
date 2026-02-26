@@ -15,6 +15,12 @@ export default function AuthPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder')) {
+            setError('Environment variables are missing! You need to add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your Vercel project settings, then redeploy.');
+            return;
+        }
+
         setError('');
         setLoading(true);
 
