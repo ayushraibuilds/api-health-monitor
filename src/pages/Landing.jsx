@@ -85,10 +85,10 @@ export default function Landing() {
 
     const handleDemoLogin = async () => {
         setIsDemoLoading(true);
-        const { success } = await signIn('demo@pulseapi.com', 'demo12345');
+        const { success, error } = await signIn('demo@pulseapi.com', 'demo12345');
         setIsDemoLoading(false);
         if (success) navigate('/dashboard');
-        else alert('Demo login failed. Please ensure the Supabase backend is running.');
+        else alert(`Demo login failed: ${error || 'Please ensure the Supabase backend is configured correctly.'}`);
     };
 
     return (

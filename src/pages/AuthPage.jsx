@@ -26,10 +26,10 @@ export default function AuthPage() {
             if (result.success) {
                 navigate('/dashboard');
             } else {
-                setError('Authentication failed. Please try again.');
+                setError(result.error || 'Authentication failed. Please try again.');
             }
         } catch (err) {
-            setError('Something went wrong. Please try again.');
+            setError(err.message || 'Something went wrong. Please try again.');
         } finally {
             setLoading(false);
         }
