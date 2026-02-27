@@ -23,12 +23,30 @@ const demoKPIs = {
     activeProviders: { label: 'Active Providers', value: '3', trend: '+1', trendDirection: 'up' },
 };
 
-const demoTrend = Array.from({ length: 30 }, (_, i) => ({
-    date: new Date(Date.now() - (29 - i) * 86400000).toISOString().split('T')[0],
-    OpenAI: Math.random() * 10 + 2,
-    Anthropic: Math.random() * 5 + 1,
-    'Google AI': Math.random() * 3 + 0.5
-}));
+const demoTrend = Array.from({ length: 30 }, (_, i) => {
+    const OpenAI = Math.random() * 10 + 2;
+    const Anthropic = Math.random() * 5 + 1;
+    const GoogleAI = Math.random() * 3 + 0.5;
+    return {
+        date: new Date(Date.now() - (29 - i) * 86400000).toISOString().split('T')[0],
+        OpenAI, Anthropic, 'Google AI': GoogleAI,
+        total: OpenAI + Anthropic + GoogleAI
+    };
+});
+
+const demoCostByModel = [
+    { model: 'gpt-4o', provider: 'OpenAI', requests: 4520, cost: '$120.50', avgCost: '$0.026', trend: '+5.2%' },
+    { model: 'claude-3-5-sonnet', provider: 'Anthropic', requests: 2150, cost: '$85.00', avgCost: '$0.039', trend: '-2.1%' },
+    { model: 'gemini-1.5-pro', provider: 'Google AI', requests: 1200, cost: '$32.40', avgCost: '$0.027', trend: '+1.5%' },
+    { model: 'gpt-4o-mini', provider: 'OpenAI', requests: 8020, cost: '$15.20', avgCost: '$0.0018', trend: '+12.4%' },
+];
+
+const demoWeeklyComparison = [
+    { week: 'Week 1', budget: 110, actual: 95 },
+    { week: 'Week 2', budget: 110, actual: 105 },
+    { week: 'Week 3', budget: 110, actual: 115 },
+    { week: 'Week 4', budget: 110, actual: 80 },
+];
 
 const demoBreakdown = [
     { name: 'OpenAI', value: 340, color: '#10a37f' },
@@ -116,6 +134,18 @@ export async function getSpendBreakdown() {
 export async function getAlerts() {
     const user = await getUser();
     if (user?.email === 'demo@pulseapi.com') return demoAlerts;
+    return [];
+}
+
+export async function getCostByModel() {
+    const user = await getUser();
+    if (user?.email === 'demo@pulseapi.com') return demoCostByModel;
+    return [];
+}
+
+export async function getWeeklyComparison() {
+    const user = await getUser();
+    if (user?.email === 'demo@pulseapi.com') return demoWeeklyComparison;
     return [];
 }
 

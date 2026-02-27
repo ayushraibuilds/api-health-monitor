@@ -29,12 +29,17 @@ export default function CostAnalytics() {
     const [period, setPeriod] = useState('daily');
     const [providers, setProviders] = useState([]);
     const [costTrendData, setCostTrendData] = useState([]);
-    const costByModel = [];
-    const weeklyComparison = [];
+    const [costByModel, setCostByModel] = useState([]);
+    const [weeklyComparison, setWeeklyComparison] = useState([]);
 
     useEffect(() => {
         getProvidersData().then(setProviders);
         getCostTrendData().then(setCostTrendData);
+        // We will add getCostByModel and getWeeklyComparison to apiService
+        import('../services/apiService').then(module => {
+            if (module.getCostByModel) module.getCostByModel().then(setCostByModel);
+            if (module.getWeeklyComparison) module.getWeeklyComparison().then(setWeeklyComparison);
+        });
     }, []);
 
     const totalSpend = providers.reduce((sum, p) => sum + p.spend, 0);
