@@ -42,10 +42,6 @@ export function AuthProvider({ children }) {
         });
 
         if (error) {
-            // If user doesn't exist, we fallback to signup for this demo context
-            if (error.message.includes('Invalid login credentials')) {
-                return signUp(email, password, email.split('@')[0]);
-            }
             return { success: false, error: error.message };
         }
         return { success: true, user: data.user };
