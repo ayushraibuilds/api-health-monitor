@@ -4,19 +4,53 @@ import { supabase } from '../lib/supabase';
  * API Service Layer for Supabase Backend
  */
 
-async function getUserId() {
+async function getUser() {
     const { data: { session } } = await supabase.auth.getSession();
-    return session?.user?.id;
+    return session?.user;
 }
 
+// --- MOCK DATA FOR DEMO MODE ---
+const demoProviders = [
+    { id: '1', name: 'OpenAI', status: 'operational', latency: 245, requests: 12540, spend: 14.23, color: '#10a37f' },
+    { id: '2', name: 'Anthropic', status: 'degraded', latency: 850, requests: 3420, spend: 8.50, color: '#d97757' },
+    { id: '3', name: 'Google AI', status: 'operational', latency: 120, requests: 8900, spend: 5.12, color: '#4285f4' },
+];
+
+const demoKPIs = {
+    totalSpend: { label: 'Total Spend (30d)', value: '$224.50', trend: '+12.5%', trendDirection: 'up' },
+    monthlyEstimate: { label: 'Monthly Estimate', value: '$450.00', trend: '-5.2%', trendDirection: 'down' },
+    avgLatencyMs: { label: 'Avg Latency', value: '185ms', trend: '-12ms', trendDirection: 'down' },
+    activeProviders: { label: 'Active Providers', value: '3', trend: '+1', trendDirection: 'up' },
+};
+
+const demoTrend = Array.from({ length: 30 }, (_, i) => ({
+    date: new Date(Date.now() - (29 - i) * 86400000).toISOString().split('T')[0],
+    OpenAI: Math.random() * 10 + 2,
+    Anthropic: Math.random() * 5 + 1,
+    'Google AI': Math.random() * 3 + 0.5
+}));
+
+const demoBreakdown = [
+    { name: 'OpenAI', value: 340, color: '#10a37f' },
+    { name: 'Anthropic', value: 120, color: '#d97757' },
+    { name: 'Google AI', value: 85, color: '#4285f4' },
+];
+
+const demoAlerts = [
+    { id: 'a1', title: 'High Latency Detected', provider_name: 'Anthropic', severity: 'warning', created_at: new Date(Date.now() - 3600000).toISOString(), acknowledged: false },
+    { id: 'a2', title: 'Cost Threshold Exceeded', provider_name: 'OpenAI', severity: 'critical', created_at: new Date(Date.now() - 86400000).toISOString(), acknowledged: false },
+];
+// ------------------------------
+
 export async function getProvidersData() {
-    const userId = await getUserId();
-    if (!userId) return [];
+    const user = await getUser();
+    if (!user) return [];
+    if (user.email === 'demo@pulseapi.com') return demoProviders;
 
     const { data, error } = await supabase
         .from('providers')
         .select('*')
-        .eq('user_id', userId);
+        .eq('user_id', user.id);
 
     if (error) {
         console.error('Error fetching providers:', error);
@@ -55,8 +89,9 @@ export async function getProvidersData() {
 }
 
 export async function getKPIData() {
-    const userId = await getUserId();
-    if (!userId) return null;
+    const user = await getUser();
+    if (!user) return null;
+    if (user.email === 'demo@pulseapi.com') return demoKPIs;
 
     return {
         totalSpend: { label: 'Total Spend (30d)', value: '$0.00', trend: '0%', trendDirection: 'down' },
@@ -67,14 +102,20 @@ export async function getKPIData() {
 }
 
 export async function getCostTrendData() {
+    const user = await getUser();
+    if (user?.email === 'demo@pulseapi.com') return demoTrend;
     return [];
 }
 
 export async function getSpendBreakdown() {
+    const user = await getUser();
+    if (user?.email === 'demo@pulseapi.com') return demoBreakdown;
     return [];
 }
 
 export async function getAlerts() {
+    const user = await getUser();
+    if (user?.email === 'demo@pulseapi.com') return demoAlerts;
     return [];
 }
 
@@ -128,13 +169,18 @@ export async function removeApiKey(provider) {
 }
 
 export async function isProviderConnected(provider) {
-    const userId = await getUserId();
-    if (!userId) return false;
+    const user = await getUser();
+    if (!user) return false;
+
+    if (user.email === 'demo@pulseapi.com') {
+        const demoProvidersConnected = ['openai', 'anthropic', 'google ai'];
+        return demoProvidersConnected.includes(provider.toLowerCase());
+    }
 
     const { data, error } = await supabase
         .from('providers')
         .select('id')
-        .match({ user_id: userId, provider_name: provider })
+        .match({ user_id: user.id, provider_name: provider })
         .single();
 
     if (error) return false;
