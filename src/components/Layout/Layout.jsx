@@ -43,7 +43,7 @@ export default function Layout({ children }) {
         { path: '/settings', icon: Settings, label: 'Settings' },
     ];
 
-    const initials = user?.initials || user?.name?.slice(0, 2).toUpperCase() || 'DK';
+    const initials = user?.user_metadata?.initials || user?.user_metadata?.full_name?.slice(0, 2).toUpperCase() || user?.email?.slice(0, 2).toUpperCase() || 'DK';
 
     const handleSignOut = () => {
         signOut();

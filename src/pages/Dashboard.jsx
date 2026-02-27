@@ -7,6 +7,7 @@ import {
     AlertTriangle, AlertCircle, Info, ArrowRight,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getProvidersData, getKPIData, getCostTrendData, getSpendBreakdown, getAlerts } from '../services/apiService';
 import { supabase } from '../lib/supabase';
 const severityIcon = {
@@ -39,6 +40,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Dashboard() {
+    const navigate = useNavigate();
     const [providers, setProviders] = useState([]);
     const [kpiMetrics, setKpiMetrics] = useState({});
     const [costTrendData, setCostTrendData] = useState([]);
@@ -82,7 +84,7 @@ export default function Dashboard() {
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
                         <button className="btn btn-secondary">Export Report</button>
-                        <button className="btn btn-primary">+ Add Provider</button>
+                        <button className="btn btn-primary" onClick={() => navigate('/settings')}>+ Add Provider</button>
                     </div>
                 </div>
             </div>
