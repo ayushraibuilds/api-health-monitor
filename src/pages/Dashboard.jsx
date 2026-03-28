@@ -79,7 +79,7 @@ export default function Dashboard() {
             <div className="page-header">
                 <div className="page-header-row">
                     <div>
-                        <h1>API Health Dashboard</h1>
+                        <h1 style={{ background: 'linear-gradient(to right, #6366f1, #a855f7)', WebkitBackgroundClip: 'text', color: 'transparent', fontWeight: '800' }}>API Health Dashboard</h1>
                         <p>Real-time monitoring across {providers.length} providers • Last updated just now</p>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
